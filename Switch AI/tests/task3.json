@@ -1,4 +1,0 @@
-{
-"inputs": [["4"], ["7"], ["0"]],
-"outputs": ["EVEN", "ODD", "EVEN"]
-}
