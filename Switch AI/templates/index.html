@@ -1,0 +1,89 @@
+<style>
+body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; }
+#menu { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+#menu button { padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer; background-color: #ffffff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: 0.2s; }
+#menu button:hover { background-color: #e0e0e0; }
+#menu button span { font-weight: bold; margin-left: 5px; }
+.ok { color: green; font-weight: bold; }
+.fail { color: red; font-weight: bold; }
+.new { color: gray; font-weight: bold; }
+#title { font-size: 24px; margin-bottom: 5px; }
+#desc { font-size: 16px; margin-bottom: 15px; }
+#info { font-size: 14px; margin-bottom: 15px; color: #555; }
+#code { width: 100%; height: 200px; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-family: monospace; font-size: 14px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); }
+button#submit { margin-top: 10px; padding: 10px 20px; border: none; border-radius: 8px; background-color: #4CAF50; color: white; font-size: 16px; cursor: pointer; transition: 0.2s; }
+button#submit:hover { background-color: #45a049; }
+#out { background-color: #ffffff; padding: 10px; border-radius: 8px; min-height: 100px; white-space: pre-wrap; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+</style>
+
+
+<div id="menu">
+{% for t in tasks %}
+<button onclick="loadTask({{t.id}})" id="btn{{t.id}}">
+{{t.title}} <span id="status{{t.id}}" class="{{progress[t.id|string]}}">({{progress[t.id|string]}})</span>
+</button>
+{% endfor %}
+</div>
+
+
+<h2 id="title"></h2>
+<p id="desc"></p>
+<p id="info"></p>
+<textarea id="code"></textarea><br>
+<button id="submit" onclick="send()">Проверить</button>
+<pre id="out"></pre>
+
+
+<script>
+let current = 1;
+const tasks = {{tasks|tojson}};
+let codes = {};
+
+
+function loadTask(id){
+current = id;
+const t = tasks.find(x => x.id == id);
+title.textContent = t.title;
+desc.textContent = t.description;
+info.textContent = t.info || "Дополнительной информации нет";
+out.textContent = "";
+if(codes[id]){
+code.value = codes[id];
+} else {
+code.value = "";
+}
+}
+
+
+loadTask(1);
+
+
+function send(){
+codes[current] = code.value; // сохраняем код для текущей задачи
+fetch("/check/" + current, {
+method: "POST",
+headers: {'Content-Type':'application/json'},
+body: JSON.stringify({code: code.value})
+})
+.then(r => r.json())
+.then(d => {
+let text = "";
+d.results.forEach(t => {
+if(t.ok) text += "Тест " + t.test + ": OK\n";
+else {
+text += "Тест " + t.test + ": FAIL\n";
+text += "Ввод: " + t.input + "\n";
+text += "Ожидалось: " + t.expected + "\n";
+text += "Получено: " + t.got + "\n";
+}
+});
+out.textContent = text;
+
+
+// Обновляем статус задачи
+const statusSpan = document.getElementById("status" + current);
+statusSpan.textContent = "(" + d.status + ")";
+statusSpan.className = d.status;
+});
+}
+</script>
